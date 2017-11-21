@@ -22,6 +22,8 @@ std::queue<Graph> job_q;
 sem_t job_q_flag1, job_q_flag2,job_q_flag3;
 sem_t next_flag1, next_flag2, next_flag3;
 sem_t done_flag1, done_flag2, done_flag3;
+sem_t s_quit;
+bool quit_eof;
 // clockid_t start_time1, start_time2, start_time3, end_time1, end_time2, end_time3;
 // timespec s_timespec1, s_timespec2, s_timespec3, e_timespec1, e_timespec2, e_timespec3;
 pthread_mutex_t dlock;
@@ -161,8 +163,8 @@ return "";
 
 }
 
-// using namespace std;
 
+// start three threads for calculation the minimum vertex cover
 void * start_thread1(void * arg) {
   int sem_rs1;
   while(true){
@@ -266,19 +268,32 @@ void * start_thread_output(void * arg) {
   int res;
   while(true){
     res = sem_wait(&done_flag1);
+    if(res != 0){
+      std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+      break;
+    }
     std::cout << ret1 << std::endl;
     res = sem_wait(&done_flag2);
+    if(res != 0){
+      std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+      break;
+    }
     std::cout << ret2 << std::endl;
     res = sem_wait(&done_flag3);
+    if(res != 0){
+      std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+      break;
+    }
     std::cout << ret3 << std::endl;
 
     mulock(LOCK, &dlock);
     job_q.pop();
     mulock(UNLOCK, &dlock);
-
     sem_post(&next_flag1);
     sem_post(&next_flag2);
     sem_post(&next_flag3);
+    if(job_q.empty() && quit_eof)
+      sem_post(&s_quit);
   }
   return NULL;
 }
@@ -304,6 +319,7 @@ int main(int argc, char **argv) {
   sem_init(&next_flag1, 0, 1);
   sem_init(&next_flag2, 0, 1);
   sem_init(&next_flag3, 0, 1);
+  sem_init(&s_quit,0,0);
   ret = pthread_create(&thr1, NULL, &start_thread1, NULL);
   ret = pthread_create(&thr2, NULL, &start_thread2, NULL);
   ret = pthread_create(&thr3, NULL, &start_thread3, NULL);
@@ -379,5 +395,11 @@ int main(int argc, char **argv) {
     }
 
   }
+  quit_eof = true;
+  pthread_join(thr_output,NULL);
+  sem_wait(&s_quit);
+  pthread_cancel(thr1);
+  pthread_cancel(thr2);
+  pthread_cancel(thr3);
  return 0;
 }
