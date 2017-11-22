@@ -4,8 +4,12 @@
 // defines Solver
 #include "minisat/core/Solver.h"
 #include <iomanip>
+#include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <sstream>
+#include <string>
+#include <stdexcept>
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
@@ -301,13 +305,11 @@ void * start_thread_output(void * arg) {
 
 
 
-
+bool starts_with(const string& s1, const string& s2) {
+    return s2.size() <= s1.size() && s1.compare(0, s2.size(), s2) == 0;
+}
 
 int main(int argc, char **argv) {
-  char inputco, quo;
-  char flag = ' ';
-  int  vertex1 = 0, vertex2 = 0;
-  Graph * g = nullptr;
   int ret;
   pthread_mutex_init(&dlock, NULL);
   sem_init(&done_flag1, 0, 0);
@@ -325,76 +327,80 @@ int main(int argc, char **argv) {
   ret = pthread_create(&thr3, NULL, &start_thread3, NULL);
   ret = pthread_create(&thr_output, NULL, &start_thread_output, NULL);
 
-  while(scanf("%c",&inputco) != EOF){
+  char inputco, mark,comma,opmark;
+  char flag = ' ';
+  int vernum, vertex1, vertex2;
+  Graph * g = nullptr;
+
+    std::string line;
+  while(!std::getline(std::cin,line).eof()){
+    std::istringstream iss (line);
     try{
-      if(inputco != 'V'  && inputco != 'E'){
-
-        throw "Error: Invalid command!";
+    if(starts_with(line,"V ")){
+      if (flag == 'V'){
+        throw "Error: We are waiting for 'E' Command!";
       }
-
-      switch(inputco){
-
-      case 'V':
-        if (flag == 'V'){
-          throw "Error: We are waiting for 'E' Command!";
-        }
-        scanf("%d",&vernum);
-        g = new Graph(vernum);
-        break;
-
-
-      case 'E':
-        if (flag == 'E'){
-          throw "Error: We are waiting for 'V' Command!";
-        }
-        scanf(" %c",&quo);
-        char comma = ',';
-
-        while ( comma == ',') {
-          scanf("<%d,%d>", &vertex1, &vertex2);
-
-          scanf("%c", &comma);
-          if(vertex1 > vernum -1 || vertex2 > vernum -1){
-            throw "Error: Vertex ID for 'E' is invalid!";
-          }
-          if(vertex1 < 0 || vertex2 < 0){
-            throw "Error: Invalid Vertex! Enter a non-negative number!";
-          }
-
-            if(!g){
-              throw "Error: No existed graph!";
-            }
-
-          if(! (vertex1 == vertex2 && vertex1 == 0)){
-          g->addEdge(vertex1,vertex2);
-        }
-
-          }
-          producer(g->V,g->adjList);
-        //
-        //   for(int k=1; k<= vernum; k++){
-        //     ToCNF *cnf = nullptr;
-        //     cnf = new ToCNF(vernum,k);
-        //     if(cnf->check_satisfiable(vernum,k,g->adjList))
-        //       break;
-        //     }
-        //
-        // appro_vc1(vernum,g->adjList);
-        // appro_vc2(vernum,g->adjList);
-        break;
-
-
-      }
-      getchar();
-      flag = inputco;
-
-    }
-    catch(const char* excep){
-      fseek(stdin, 0, SEEK_END);
-      fprintf(stderr, "%s\n", excep);
+      iss>>inputco>>vernum;
+      g = new Graph(vernum);
+      flag = 'V';
+      continue;
     }
 
+    if(starts_with(line,"E")){
+      if(!g){
+        throw "Error: No existed graph!";
+      }
+      if (flag == 'E'){
+        throw "Error: We are waiting for 'V' Command!";
+      }
+
+      iss>>inputco>>mark>>mark;
+      // std::cout<<"mark is"<<mark<<'\n';
+      if(mark=='}'){
+        flag = 'E';
+        g->addEdge(0,0);
+        continue;
+      }
+      else{
+
+        while(mark=='<'){
+        iss>>vertex1>>comma>>vertex2>>opmark;
+        std::cout<<vertex1<<" "<<vertex2<<'\n';
+        if(vertex1 > vernum -1 || vertex2 > vernum -1){
+          throw "Error: Vertex ID for 'E' is invalid!";
+        }
+        if(vertex1 < 0 || vertex2 < 0){
+          throw "Error: Invalid Vertex! Enter a non-negative number!";
+        }
+
+        flag = 'E';
+        g->addEdge(vertex1,vertex2);
+        iss>>comma;
+        if(comma!=','){
+          break;
+        }
+        else
+          iss>>mark;
+
+
+        }
+        producer(g->V,g->adjList);
+        continue;
+      }
+
+    }
+
+  }catch(const char* excep){
+    fseek(stdin, 0, SEEK_END);
+    fprintf(stderr, "%s\n", excep);
   }
+      // getchar();
+
+
+    }
+
+
+
   quit_eof = true;
   pthread_join(thr_output,NULL);
   sem_wait(&s_quit);
