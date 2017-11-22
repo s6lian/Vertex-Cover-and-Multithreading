@@ -310,7 +310,7 @@ bool starts_with(const string& s1, const string& s2) {
 }
 
 int main(int argc, char **argv) {
-  int ret;
+  // int ret;
   pthread_mutex_init(&dlock, NULL);
   sem_init(&done_flag1, 0, 0);
   sem_init(&done_flag2, 0, 0);
@@ -358,14 +358,15 @@ int main(int argc, char **argv) {
       // std::cout<<"mark is"<<mark<<'\n';
       if(mark=='}'){
         flag = 'E';
-        g->addEdge(0,0);
+        // g->addEdge(0,0);
+        producer(g->V,g->adjList);
         continue;
       }
       else{
 
         while(mark=='<'){
         iss>>vertex1>>comma>>vertex2>>opmark;
-        std::cout<<vertex1<<" "<<vertex2<<'\n';
+        // std::cout<<vertex1<<" "<<vertex2<<'\n';
         if(vertex1 > vernum -1 || vertex2 > vernum -1){
           throw "Error: Vertex ID for 'E' is invalid!";
         }
