@@ -336,7 +336,7 @@ int main(int argc, char **argv) {
   int vernum, vertex1, vertex2;
   Graph * g = nullptr;
 
-    std::string line;
+  std::string line;
   while(!std::getline(std::cin,line).eof()){
     std::istringstream iss (line);
     try{
@@ -359,7 +359,6 @@ int main(int argc, char **argv) {
       }
 
       iss>>inputco>>mark>>mark;
-      // std::cout<<"mark is"<<mark<<'\n';
       if(mark=='}'){
         flag = 'E';
         // g->addEdge(0,0);
@@ -377,8 +376,6 @@ int main(int argc, char **argv) {
         if(vertex1 < 0 || vertex2 < 0){
           throw "Error: Invalid Vertex! Enter a non-negative number!";
         }
-
-
         g->addEdge(vertex1,vertex2);
         iss>>comma;
         if(comma!=','){
@@ -386,8 +383,6 @@ int main(int argc, char **argv) {
         }
         else
           iss>>mark;
-
-
         }
         flag = 'E';
         producer(g->V,g->adjList);
