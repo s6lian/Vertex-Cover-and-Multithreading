@@ -310,7 +310,7 @@ bool starts_with(const string& s1, const string& s2) {
 }
 
 int main(int argc, char **argv) {
-  // int ret;
+  int ret;
   pthread_mutex_init(&dlock, NULL);
   sem_init(&done_flag1, 0, 0);
   sem_init(&done_flag2, 0, 0);
@@ -332,7 +332,7 @@ int main(int argc, char **argv) {
   int vernum, vertex1, vertex2;
   Graph * g = nullptr;
 
-    std::string line;
+  std::string line;
   while(!std::getline(std::cin,line).eof()){
     std::istringstream iss (line);
     try{
@@ -355,7 +355,6 @@ int main(int argc, char **argv) {
       }
 
       iss>>inputco>>mark>>mark;
-      // std::cout<<"mark is"<<mark<<'\n';
       if(mark=='}'){
         flag = 'E';
         // g->addEdge(0,0);
@@ -368,12 +367,12 @@ int main(int argc, char **argv) {
         iss>>vertex1>>comma>>vertex2>>opmark;
         // std::cout<<vertex1<<" "<<vertex2<<'\n';
         if(vertex1 > vernum -1 || vertex2 > vernum -1){
+        flag = 'E';
           throw "Error: Vertex ID for 'E' is invalid!";
         }
         if(vertex1 < 0 || vertex2 < 0){
           throw "Error: Invalid Vertex! Enter a non-negative number!";
         }
-
         flag = 'E';
         g->addEdge(vertex1,vertex2);
         iss>>comma;
@@ -382,8 +381,6 @@ int main(int argc, char **argv) {
         }
         else
           iss>>mark;
-
-
         }
         producer(g->V,g->adjList);
         continue;
