@@ -31,7 +31,7 @@ bool quit_eof = false;
 // clockid_t start_time1, start_time2, start_time3, end_time1, end_time2, end_time3;
 // timespec s_timespec1, s_timespec2, s_timespec3, e_timespec1, e_timespec2, e_timespec3;
 pthread_mutex_t dlock;
-pthread_t thr1, thr2, thr3, thr_output; //thread identifier
+pthread_t thr1, thr2, thr3, thr_IO; //thread identifier
 std::string ret1, ret2, ret3;
 int vernum;
 class ToCNF{
@@ -64,106 +64,106 @@ std::string ToCNF::result(int &N, vector < vector<int> > edges){
     return "CNF-SAT-VC: ";
   }
   for(int k=1; k<= N; k++){
-      // ToCNF *cnf = nullptr;
-      // cnf = new ToCNF(N);
-      res =ToCNF::check_satisfiable(N,k,edges);
+    // ToCNF *cnf = nullptr;
+    // cnf = new ToCNF(N);
+    res =ToCNF::check_satisfiable(N,k,edges);
 
-      if(res.size()!=0){
-        return res;
-        break;
-      }
+    if(res.size()!=0){
+      return res;
+      break;
+    }
 
-      }
+  }
   return "";
 
 }
 
 std::string ToCNF::check_satisfiable(int &N, int &K, vector < vector<int> > edges){
 
-std::unique_ptr<Minisat::Solver> solver(new Minisat::Solver());
+  std::unique_ptr<Minisat::Solver> solver(new Minisat::Solver());
 
-Minisat::vec<Minisat::Lit> litls;
+  Minisat::vec<Minisat::Lit> litls;
 
-//the size of vertex cover is K and there are N vertexes in Graph
+  //the size of vertex cover is K and there are N vertexes in Graph
 
-for(int i=0; i< K*N; i++)
+  for(int i=0; i< K*N; i++)
   litls.push(Minisat::mkLit(solver->newVar()));
 
 
-//check if it is at least one vertex is the ith vertex in vertex cover
-for(int i=0; i<K; i++){
-  Minisat::vec<Minisat::Lit> addlits;
-  for(int j=0; j<N; j++){
-    addlits.push(litls[j+i*N]);
-  }
-  solver->addClause(addlits);
-
-}
-
-
-//check whether no one vertex appear twice in a vertex cover
-for(int i=0; i<N; i++){
-  for(int j=0; j<K; j++){
-    for(int m=j+1; m<K; m++){
-      Minisat::vec<Minisat::Lit> addlits;
-      addlits.push(~litls[i+j*N]);
-      addlits.push(~litls[i+m*N]);
-      solver->addClause(addlits);
+  //check if it is at least one vertex is the ith vertex in vertex cover
+  for(int i=0; i<K; i++){
+    Minisat::vec<Minisat::Lit> addlits;
+    for(int j=0; j<N; j++){
+      addlits.push(litls[j+i*N]);
     }
-    //std::cerr<<"j is "<< j<<" size of addlits: " << addlits.size()<<std::endl;
+    solver->addClause(addlits);
+
   }
-}
 
 
-//check whether no more than one vertex appears in the ith position in a vertex cover
-for(int i=0; i<K; i++){
-  for(int j=0; j<N; j++){
+  //check whether no one vertex appear twice in a vertex cover
+  for(int i=0; i<N; i++){
+    for(int j=0; j<K; j++){
+      for(int m=j+1; m<K; m++){
+        Minisat::vec<Minisat::Lit> addlits;
+        addlits.push(~litls[i+j*N]);
+        addlits.push(~litls[i+m*N]);
+        solver->addClause(addlits);
+      }
+      //std::cerr<<"j is "<< j<<" size of addlits: " << addlits.size()<<std::endl;
+    }
+  }
+
+
+  //check whether no more than one vertex appears in the ith position in a vertex cover
+  for(int i=0; i<K; i++){
+    for(int j=0; j<N; j++){
       for(int m=j+1; m<N; m++){
         Minisat::vec<Minisat::Lit> addlits;
         addlits.push(~litls[j+i*N]);
         addlits.push(~litls[m+i*N]);
         solver->addClause(addlits);
-  }
-}
-}
-
-
-//check whether every edge is incident to at least one vertex in the vertex cover
-for(std::size_t src = 0, max =edges.size(); src != max; src++) {
-  for(auto &dst: edges[src]) {
-    Minisat::vec<Minisat::Lit> addlits;
-    for(int i = 0; i < K; i++) {
-      // std::cerr <<  K<<" " << src << " " << dst << std::endl;
-      addlits.push(litls[src + i*N]);
-      addlits.push(litls[dst + i*N]);
+      }
     }
-    solver->addClause(addlits);
   }
 
-}
 
+  //check whether every edge is incident to at least one vertex in the vertex cover
+  for(std::size_t src = 0, max =edges.size(); src != max; src++) {
+    for(auto &dst: edges[src]) {
+      Minisat::vec<Minisat::Lit> addlits;
+      for(int i = 0; i < K; i++) {
+        // std::cerr <<  K<<" " << src << " " << dst << std::endl;
+        addlits.push(litls[src + i*N]);
+        addlits.push(litls[dst + i*N]);
+      }
+      solver->addClause(addlits);
+    }
 
-
-
-bool yon = solver->solve();
-std::ostringstream output;
-vector <int> min_vc= {};
-if(yon) {
-output << "CNF-SAT-VC: ";
-for (int i=0; i<N; i++){
-  for(int j=0; j<K; j++)
-  if(solver->modelValue(litls[i+j*N]) == Minisat::l_True){
-    min_vc.push_back(i);
   }
 
-}
-for(int k=0; k<min_vc.size()-1; k++)
-  output<< min_vc[k]<<",";
-output<<min_vc[min_vc.size()-1];
 
-return output.str();
-}
-return "";
+
+
+  bool yon = solver->solve();
+  std::ostringstream output;
+  vector <int> min_vc= {};
+  if(yon) {
+    output << "CNF-SAT-VC: ";
+    for (int i=0; i<N; i++){
+      for(int j=0; j<K; j++)
+      if(solver->modelValue(litls[i+j*N]) == Minisat::l_True){
+        min_vc.push_back(i);
+      }
+
+    }
+    for(int k=0; k<min_vc.size()-1; k++)
+    output<< min_vc[k]<<",";
+    output<<min_vc[min_vc.size()-1];
+
+    return output.str();
+  }
+  return "";
 
 }
 
@@ -268,34 +268,134 @@ int producer(int vertex_num, std::vector< vector<int> > edges){
   return 0;
 }
 
-void * start_thread_output(void * arg) {
-  int res;
-  while(true){
-    res = sem_wait(&done_flag1);
-    if(res != 0){
-      std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
-      break;
-    }
-    std::cout << ret1 << std::endl;
-    res = sem_wait(&done_flag2);
-    if(res != 0){
-      std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
-      break;
-    }
-    std::cout << ret2 << std::endl;
-    res = sem_wait(&done_flag3);
-    if(res != 0){
-      std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
-      break;
-    }
-    std::cout << ret3 << std::endl;
+bool starts_with(const string& s1, const string& s2) {
+  return s2.size() <= s1.size() && s1.compare(0, s2.size(), s2) == 0;
+}
 
-    mulock(LOCK, &dlock);
-    job_q.pop();
-    mulock(UNLOCK, &dlock);
-    sem_post(&next_flag1);
-    sem_post(&next_flag2);
-    sem_post(&next_flag3);
+void * start_thread_IO(void * arg) {
+  int res;
+  char inputco, mark,comma,opmark;
+  char flag = ' ';
+  int vernum, vertex1, vertex2;
+  Graph * g = nullptr;
+
+  std::string line;
+  while(true){
+    while(!std::getline(std::cin,line).eof()){
+      std::istringstream iss (line);
+      try{
+        if(starts_with(line,"V ")){
+          if (flag == 'V'){
+            throw "Error: We are waiting for 'E' Command!";
+          }
+          iss>>inputco>>vernum;
+          g = new Graph(vernum);
+          flag = 'V';
+          continue;
+        }
+
+        if(starts_with(line,"E")){
+          if(!g){
+            throw "Error: No existed graph!";
+          }
+          if (flag == 'E'){
+            throw "Error: We are waiting for 'V' Command!";
+          }
+
+          iss>>inputco>>mark>>mark;
+          if(mark=='}'){
+            flag = 'E';
+            // g->addEdge(0,0);
+            producer(g->V,g->adjList);
+            res = sem_wait(&done_flag1);
+            if(res != 0){
+              std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+              break;
+            }
+            std::cout << ret1 << std::endl;
+            res = sem_wait(&done_flag2);
+            if(res != 0){
+              std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+              break;
+            }
+            std::cout << ret2 << std::endl;
+            res = sem_wait(&done_flag3);
+            if(res != 0){
+              std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+              break;
+            }
+            std::cout << ret3 << std::endl;
+
+            mulock(LOCK, &dlock);
+            job_q.pop();
+            mulock(UNLOCK, &dlock);
+            sem_post(&next_flag1);
+            sem_post(&next_flag2);
+            sem_post(&next_flag3);
+
+            continue;
+          }
+          else{
+
+            while(mark=='<'){
+              iss>>vertex1>>comma>>vertex2>>opmark;
+              // std::cout<<vertex1<<" "<<vertex2<<'\n';
+              if(vertex1 > vernum -1 || vertex2 > vernum -1){
+                throw "Error: Vertex ID for 'E' is invalid!";
+              }
+              if(vertex1 < 0 || vertex2 < 0){
+                throw "Error: Invalid Vertex! Enter a non-negative number!";
+              }
+              g->addEdge(vertex1,vertex2);
+              iss>>comma;
+              if(comma!=','){
+                break;
+              }
+              else
+              iss>>mark;
+            }
+            flag = 'E';
+            producer(g->V,g->adjList);
+            res = sem_wait(&done_flag1);
+            if(res != 0){
+              std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+              break;
+            }
+            std::cout << ret1 << std::endl;
+            res = sem_wait(&done_flag2);
+            if(res != 0){
+              std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+              break;
+            }
+            std::cout << ret2 << std::endl;
+            res = sem_wait(&done_flag3);
+            if(res != 0){
+              std::cerr << "Fail to wait semaphore done flag!"<<std::endl;
+              break;
+            }
+            std::cout << ret3 << std::endl;
+
+            mulock(LOCK, &dlock);
+            job_q.pop();
+            mulock(UNLOCK, &dlock);
+            sem_post(&next_flag1);
+            sem_post(&next_flag2);
+            sem_post(&next_flag3);
+
+            continue;
+          }
+
+        }
+
+      }catch(const char* excep){
+        fseek(stdin, 0, SEEK_END);
+        fprintf(stderr, "%s\n", excep);
+      }
+      // getchar();
+
+
+    }
+    quit_eof = true;
 
     if(job_q.empty() && quit_eof){
 
@@ -309,9 +409,7 @@ void * start_thread_output(void * arg) {
 
 
 
-bool starts_with(const string& s1, const string& s2) {
-    return s2.size() <= s1.size() && s1.compare(0, s2.size(), s2) == 0;
-}
+
 
 int main(int argc, char **argv) {
   int ret;
@@ -329,88 +427,16 @@ int main(int argc, char **argv) {
   ret = pthread_create(&thr1, NULL, &start_thread1, NULL);
   ret = pthread_create(&thr2, NULL, &start_thread2, NULL);
   ret = pthread_create(&thr3, NULL, &start_thread3, NULL);
-  ret = pthread_create(&thr_output, NULL, &start_thread_output, NULL);
+  ret = pthread_create(&thr_IO, NULL, &start_thread_IO, NULL);
 
-  char inputco, mark,comma,opmark;
-  char flag = ' ';
-  int vernum, vertex1, vertex2;
-  Graph * g = nullptr;
-
-  std::string line;
-  while(!std::getline(std::cin,line).eof()){
-    std::istringstream iss (line);
-    try{
-    if(starts_with(line,"V ")){
-      if (flag == 'V'){
-        throw "Error: We are waiting for 'E' Command!";
-      }
-      iss>>inputco>>vernum;
-      g = new Graph(vernum);
-      flag = 'V';
-      continue;
-    }
-
-    if(starts_with(line,"E")){
-      if(!g){
-        throw "Error: No existed graph!";
-      }
-      if (flag == 'E'){
-        throw "Error: We are waiting for 'V' Command!";
-      }
-
-      iss>>inputco>>mark>>mark;
-      if(mark=='}'){
-        flag = 'E';
-        // g->addEdge(0,0);
-        producer(g->V,g->adjList);
-        continue;
-      }
-      else{
-
-        while(mark=='<'){
-        iss>>vertex1>>comma>>vertex2>>opmark;
-        // std::cout<<vertex1<<" "<<vertex2<<'\n';
-        if(vertex1 > vernum -1 || vertex2 > vernum -1){
-          throw "Error: Vertex ID for 'E' is invalid!";
-        }
-        if(vertex1 < 0 || vertex2 < 0){
-          throw "Error: Invalid Vertex! Enter a non-negative number!";
-        }
-        g->addEdge(vertex1,vertex2);
-        iss>>comma;
-        if(comma!=','){
-          break;
-        }
-        else
-          iss>>mark;
-        }
-        flag = 'E';
-        producer(g->V,g->adjList);
-        continue;
-      }
-
-    }
-
-  }catch(const char* excep){
-    fseek(stdin, 0, SEEK_END);
-    fprintf(stderr, "%s\n", excep);
-  }
-      // getchar();
-
-
-    }
-
-
-
-  quit_eof = true;
-  if(job_q.empty()){
-    pthread_cancel(thr_output);
-  } else {
-    pthread_join(thr_output,NULL);
+  // if(job_q.empty()){
+  //   pthread_cancel(thr_output);
+  // } else {
+    pthread_join(thr_IO,NULL);
     // sem_wait(&s_quit);
-  }
+  // }
   pthread_cancel(thr1);
   pthread_cancel(thr2);
   pthread_cancel(thr3);
- return 0;
+  return 0;
 }
